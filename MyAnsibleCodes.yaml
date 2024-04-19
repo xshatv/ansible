@@ -1,0 +1,151 @@
+
+# TASK 1 : Setup Ansible cluster with 3 nodes, install Java on Slave 1 & MySQL on Slave 2.
+
+# PLAYBOOK to install java & mysql in javaservers & dbservers respectively.
+# Refrences:
+# https://www.cidevops.com/2020/04/ansible-playbook-for-java-11.html
+# https://www.techtransit.org/install-mysql-database-server-through-ansible-playbook/
+# https://stackoverflow.com/questions/72228946/ansible-playbook-to-install-and-configure-mysql-on-ubuntu
+
+# task1.yaml
+---
+- hosts: [javaservers]
+  tasks:
+    - name: Task - 1 Update APT package manager repositories cache
+      become: true
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Task -2 Install Java using Ansible
+      become: yes
+      apt:
+        name: openjdk-17-jre
+        state: present
+      vars:
+        packages:
+           - java-17-openjdk
+
+- name: Install and Configure MySQL on Ubuntu
+  hosts: [dbservers]
+  become: yes
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Install MySQL Server
+      apt:
+        name: mysql-server
+        state: present
+    - name: Copy MySQL configuration file
+      copy:
+        src: /path/to/your/mysql.cnf
+        dest: /etc/mysql/mysql.cnf
+    - name: Restart MySQL Service
+      service:
+        name: mysql
+        state: restarted
+
+  # OR
+
+- name: Install MySQL on Ubuntu
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+    - name: Install MySQL server
+      apt:
+        name: mysql-server
+        state: present
+    - name: Ensure MySQL service is enabled and started
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+#==========================================================================================================================
+
+# Uninstall the java & mysql
+---
+- hosts: [dbservers]
+  become: yes
+  tasks:
+    - name: Uninstall MySQL
+      apt:
+        name: mysql-server
+        state: absent
+- hosts: [appservers]
+  become: yes
+  tasks:
+    - name: Uninstall Java
+      apt:
+        name: openjdk-17-jre
+        state: absent
+
+# OR
+
+---
+- name : Uninstall MySQL on Linux
+  hosts: [dbservers]
+  become: yes
+  tasks:
+    - name: Uninstall MySQL
+      shell: apt autoremove mysql-server -y
+- hosts: [appservers]
+  become: yes
+  tasks:
+    - name: Uninstall java
+      shell: apt remove openjdk-17-jre -y
+
+# OR
+
+---
+- name: Uninstall MySQL on linux
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Stop MySQL service
+      service:
+        name: mysql
+        state: stopped
+        enabled: no
+    - name: Remove MySQL server package
+      apt:
+        name: mysql-server
+        state: absent
+- name: Uninstall Java 17 on linux
+  hosts: [appservers]
+  become: yes
+  tasks:
+    - name: Uninstall Java
+      apt:
+        name: openjdk-17-jre
+        state: absent
+#==========================================================================================================================
+# Taks 2 : Create a script which can add text “This text has been added by custom script” to /tmp/1.txt
+
+---
+- name: Add text to a file
+  hosts: allservers
+  tasks:
+    - name: Add text to /tmp/1.txt
+      ansible.builtin.lineinfile:                         # to delete the file, replace this line with "file"
+        path: /tmp/1.txt
+#       state: absent                                     # to delete the file, un-comment this & comment out below 2 lines.
+        line: 'This text has been added by custom script'
+        create: yes
+
+
+
+---
+- name: create and add text in the file
+  hosts: allservers
+  vars:
+    myfile: "/tmp/1.txt"
+  tasks:
+  - name: creating a file
+    ansible.builtin.file:
+    path: "{{myfile}}"
+    state: touch
